@@ -54,6 +54,10 @@ def GetPathLossDB_Model(distance):
 def GetRxPowerDB(a, b):   
     return REFERENCE_TX_POWER - GetPathLossDB(GetDist(a, b))
 
+#+++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+def GetPxPowerDB(a, b):   
+    return GetRxPowerDB(a, b) + GetPathLossDB(GetDist(a, b))
+#+++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def GetRxPowerDB_Model(a, b):  
     return REFERENCE_TX_POWER - GetPathLossDB_Model(GetDist(a, b))
@@ -114,8 +118,7 @@ def DSCCarrierSenseAP(ap_ind, tx_vector, tx_dest, aps, mss, MARGIN=0):
         return True
 
     # calculate my CST
-    req_cst = GetMinCSThresh(
-        GetDist(aps[ap_ind], mss[tx_dest[ap_ind]])) - MARGIN
+    req_cst = GetMinCSThresh(GetDist(aps[ap_ind], mss[tx_dest[ap_ind]])) - MARGIN
     total_interference_w = 0.0
 
     for i in range(len(aps)):
@@ -128,8 +131,56 @@ def DSCCarrierSenseAP(ap_ind, tx_vector, tx_dest, aps, mss, MARGIN=0):
         return True
     else:
         return False
+    
 
 # -------------------------------------------------------------------------------
+
+#+++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+def Idk_Px (ap_ind, tx_vector, tx_dest, aps, mss, MARGIN=0):
+    if tx_vector[ap_ind] == 1:
+        return True
+
+    # calculate my Px_power
+    my_px = DEFAULT_CS_THRESHOLD + GetPathLossDB(GetDist(aps[ap_ind], mss[tx_dest[ap_ind]]))+MARGIN
+    total_interference_w = 0.0
+
+    for i in range(len(aps)):
+        if tx_vector[i] == 1:
+            total_interference_w += DB2W(GetRxPowerDB(aps[i], aps[ap_ind]))
+    if total_interference_w == 0.0:
+        return False
+    total_interference_db = W2DB(total_interference_w)
+    if total_interference_db < my_px:
+        return True
+    else:
+        return False
+    
+# ---------------------------------------------------------------------
+   
+# def Idk_Channel (ap_ind, tx_vector, tx_dest, aps, mss, MARGIN=0):
+        
+#     if tx_vector[ap_ind] == 1:
+#         tr=True
+#     mydistance=GetDist(aps[ap_ind], mss[tx_dest[ap_ind]])  
+#     if mydistance
+        
+
+#     # calculate my Px_power
+#     my_px = DEFAULT_CS_THRESHOLD + GetPathLossDB(GetDist(aps[ap_ind], mss[tx_dest[ap_ind]]))+MARGIN
+#     total_interference_w = 0.0
+
+#     for i in range(len(aps)):
+#         if tx_vector[i] == 1:
+#             total_interference_w += DB2W(GetRxPowerDB(aps[i], aps[ap_ind]))
+#     if total_interference_w == 0.0:
+#         return False
+#     total_interference_db = W2DB(total_interference_w)
+#     if total_interference_db < my_px:
+#         return True
+#     else:
+#         return False
+
+#+++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 def SmartCarrierSenseAP(ap_ind, tx_vector, tx_dest, aps, mss, MARGIN=0):
@@ -300,34 +351,57 @@ def RunSim(NUM_GRID=3, NUM_NODES=0, NODES_PER_CELL=1, AREA_SIZE=10, NUM_CH=1, CS
 
 
     # set channels ---------------------------------------------------------------
-    if param_protocol >= 0:
-        for i in range(param_num_nodes):
-            ch = i % param_num_channels
-            chs[i, ch] = 1
+    # if param_protocol >= 0:
+    #     for i in range(param_num_nodes):
+    #         ch = i % param_num_channels
+    #         chs[i, ch] = 1
             
-# #++++++++++++++++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            if ch==0:
-                REFERENCE_TX_POWER=10
-                print("0")
-                # print(REFERENCE_TX_POWER)
-            elif ch==1:
-                REFERENCE_TX_POWER=15
-                print("1")
-                # print(REFERENCE_TX_POWER)
-            elif ch==2:
-                REFERENCE_TX_POWER=20
-                print("2")
-                # print(REFERENCE_TX_POWER)
-            elif ch==3:
-                REFERENCE_TX_POWER=25
-                print("3")
-                # print(REFERENCE_TX_POWER)
-            else:
-                REFERENCE_TX_POWER=REFERENCE_TX_POWER
-                # print("nono")
+#adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    print("set channels+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
+    divdist= np.sqrt(np.square(param_area_size/2) + np.square(param_area_size/2))/4 #최대거리/4
+    print(divdist)
+    
+    if param_protocol >= 0:
+        
+        for i in range(param_num_nodes):
+            for j in range(param_num_aps):
+                    
+                if mem[j,i]==1:
+                    memind=[j,i] 
+                    print("memind", memind)
+                    mydistance=GetDist(aps[j], mss[i]) #ap와 ms거리
+                    print("mydistance", mydistance)
+                             
+                    if mydistance <= divdist:
+                        ch=0
+                        print("ch==0", ch)
+                        GetPxPowerDB(aps[j], mss[i])
+                        #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                    elif divdist < mydistance <= divdist*2:
+                        ch=1
+                        print("ch==1", ch)
+                        GetPxPowerDB(aps[j], mss[i])
+                        #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                    elif divdist*2 < mydistance <= divdist*3:
+                        ch=2
+                        print("ch==2", ch)
+                        GetPxPowerDB(aps[j], mss[i])
+                        #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                    elif divdist*3 < mydistance:
+                        ch=3
+                        print("ch==3", ch)
+                        GetPxPowerDB(aps[j], mss[i])
+                        #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                    else:
+                        print("??") 
+                        
+                    chs[i, ch] = 1
+        print("new chs \n", chs)
+                   
+    print("set channels+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-# #++++++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
     # select initial destination -------------------------------------------------
@@ -526,4 +600,4 @@ def RunSim(NUM_GRID=3, NUM_NODES=0, NODES_PER_CELL=1, AREA_SIZE=10, NUM_CH=1, CS
 
     return total_tput_ms, bottom_50_tput_ms, bottom_25_tput_ms, fairness_ms, total_tx, total_rx
 
-#RunSim(NUM_GRID=3, AREA_SIZE=10, NODES_PER_CELL=2, NUM_CH=1, PROTO=0, CS=-82, END=10000, SEED=0, VERBOSE=True, IDEAL=True)
+#RunSim(NUM_GRID=3, AREA_SIZE=10, NODES_PER_CELL=2, NUM_CH=4, PROTO=0, CS=-82, END=10000, SEED=0, VERBOSE=True, IDEAL=True)

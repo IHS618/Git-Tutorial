@@ -55,6 +55,12 @@ def GetRxPowerDB(a, b):
     return REFERENCE_TX_POWER - GetPathLossDB(GetDist(a, b))
 
 
+#+++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+def GetPxPowerDB(a, b):   
+    return GetRxPowerDB(a, b) + GetPathLossDB(GetDist(a, b))
+#+++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 def GetRxPowerDB_Model(a, b):  
     return REFERENCE_TX_POWER - GetPathLossDB_Model(GetDist(a, b))
 
@@ -277,33 +283,26 @@ print("asc \n", asc)
 mem = np.zeros((param_num_aps, param_num_nodes)).astype(np.int)       # connect
 print("mem \n", mem)
 dst = np.zeros((param_num_aps, param_num_channels)).astype(np.int)
-print("dst \n", dst)
+#print("dst \n", dst)
 dst[:, :] = -1
-print("new dst \n", dst)
+#print("new dst \n", dst)
 chs = np.zeros((param_num_nodes, param_num_channels)).astype(np.int)  # channel
-print("chs \n", chs)
+#print("chs \n", chs)
 cws = np.zeros((param_num_aps, param_num_channels)).astype(np.int)    # contention window
-print("cws \n", cws)
+#print("cws \n", cws)
 mcw = np.zeros((param_num_aps, param_num_channels)).astype(np.int)    # maximum contention window
-print("mcw \n", mcw)
+#print("mcw \n", mcw)
 cst = np.zeros((param_num_channels))
-print("cst \n", cst)
+#print("cst \n", cst)
 #++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 txc = np.zeros((param_num_channels))
-print("txc \n", txc)
+#print("txc \n", txc)
 #++++++++++++++adding++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-
-print("=============================================")
-print("=============================================")
-#=============================================================================
 # deploy APs -----------------------------------------------------------------
 for i in range(param_num_grid):
     for j in range(param_num_grid):
-        aps[i*param_num_grid+j,
-            0:2] = np.array([j, i]) * param_area_size + param_area_size/2
+        aps[i*param_num_grid+j, 0:2] = np.array([j, i]) * param_area_size + param_area_size/2
 print("deploy APs : aps \n", aps)
 
 # deploy mobile stations -----------------------------------------------------
@@ -336,50 +335,87 @@ print("associate mss with aps")
 print("asc \n", asc)
 print("mem \n", mem)
 
-#=============================================================================================================
-
-for i in range(param_num_aps):
-    for j in range(param_num_nodes_per_cell):
-        a=GetDist(mss[j], aps[i])
-        
-        print(a)
-        
-        
-        
-print("aaaa++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-# print(a)
-print("aaaaa++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
 
 # set initial CW and max CW --------------------------------------------------
 for i in range(param_num_aps):
     for j in range(param_num_channels):
         mcw[i, j] = MIN_CW
         cws[i, j] = np.random.randint(mcw[i, j])
-print("mcw \n", mcw)
-print("cws \n", cws)
+#print("mcw \n", mcw)
+#print("cws \n", cws)
 
 # set initial carrier sense threshold ----------------------------------------
 for i in range(param_num_channels):
     cst[i] = param_cs_thresh
-print("cst \n", cst)
+#print("cst \n", cst)
+
+
+
+
+# set channels ---------------------------------------------------------------
+# if param_protocol >= 0:
+#     for i in range(param_num_nodes):
+#         ch = i % param_num_channels
+#         chs[i, ch] = 1
+# print("set channels")
+# print("ch \n", ch)
+# print("chs \n", chs)   
+
+print("aaaa++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+divdist= np.sqrt(np.square(param_area_size/2) + np.square(param_area_size/2))/4 #최대거리/4
+print(divdist)
+
+if param_protocol >= 0:
+    
+    for i in range(param_num_nodes):
+        for j in range(param_num_aps):
+                
+            if mem[j,i]==1:
+                memind=[j,i] 
+                print("memind", memind)
+                mydistance=GetDist(aps[j], mss[i]) #ap와 ms거리
+                print("mydistance", mydistance)
+                         
+                if mydistance <= divdist:
+                    ch=0
+                    print("ch==0", ch)
+                    GetPxPowerDB(aps[j], mss[i])
+                    #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                elif divdist < mydistance <= divdist*2:
+                    ch=1
+                    print("ch==1", ch)
+                    GetPxPowerDB(aps[j], mss[i])
+                    #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                elif divdist*2 < mydistance <= divdist*3:
+                    ch=2
+                    print("ch==2", ch)
+                    GetPxPowerDB(aps[j], mss[i])
+                    #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                elif divdist*3 < mydistance:
+                    ch=3
+                    print("ch==3", ch)
+                    GetPxPowerDB(aps[j], mss[i])
+                    #print(GetPxPowerDB(aps[i], mss[j]), "=============================")
+                else:
+                    print("??") 
+                    
+                chs[i, ch] = 1
+    print("new chs \n", chs)
+               
+print("aaaa++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
 
 #++++++++++++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 for i in range(param_num_channels):
     txc[i] = param_tx_power
-print("txc \n", txc)
+#print("txc \n", txc)
 #++++++++++++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       
+#+++++++++adding+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
+  
 
-
-# set channels ---------------------------------------------------------------
-if param_protocol >= 0:
-    for i in range(param_num_nodes):
-        ch = i % param_num_channels
-        chs[i, ch] = 1
-print("set channels")
-print("ch \n", ch)
-print("chs \n", chs)        
-    
+  
 # select initial destination -------------------------------------------------
 for c in range(param_num_channels):
     for i in range(param_num_aps):
@@ -389,7 +425,7 @@ for c in range(param_num_channels):
                 break
 print("destination")
 print("mem \n", mem)  
-print("chs \n", chs) 
+# print("chs \n", chs) 
 print("new dst 다 -1로 초기화 되어있음")         
 print("dst \n", dst)
 
