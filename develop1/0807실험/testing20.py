@@ -666,7 +666,6 @@ if param_verbose == True:
     print(' CST margin          : %d' % param_margin)
     print(' seed number         : %d' % param_seed)
     print(' end time            : %d' % param_end_time)
-    print(' Tx_Power            : %d' % REFERENCE_TX_POWER)
     if param_ideal == True:
         print(' ideal               : YES')
     else:
